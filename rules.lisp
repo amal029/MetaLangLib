@@ -1,7 +1,7 @@
 ;; First we define a structure that will be the context for all the rules
 
 (defstruct context (ruleset '() :type list)
-	   (union-kw 'sum :type symbol :read-only t))
+	         (union-kw 'sum :type symbol :read-only t))
 
 ;; We should be able to register rules into the ruleset
 (defun register-rule-set (ctx rule-assoc-list)
@@ -24,42 +24,42 @@
   "This function searches for the function to be applied in the
      type-hierarchy"
   (let* ((rule-set (context-ruleset ctx))
-	 (union-kw (context-union-kw ctx))
-	 (func
-	   (cdr (assoc (car obj)
-		       (cdr (assoc rule-set-name rule-set))))))
+	       (union-kw (context-union-kw ctx))
+	       (func
+	         (cdr (assoc (car obj)
+		                   (cdr (assoc rule-set-name rule-set))))))
     (setq searched
-	  (cons (car (assoc rule-set-name (context-ruleset ctx))) searched))
+	        (cons (car (assoc rule-set-name (context-ruleset ctx))) searched))
     (cond
       ((eq func nil) ;condition
-       (let ((union-val (assoc rule-set-name rule-set)))
-	 ;; Check if this is a union of types
-	 (if (eq (caadr union-val) union-kw)
-	     ;; Walk through all the items in the type set
-	     (tagbody
-		(loop for item in (cdadr union-val) do
-		  (when (not (find item searched))
-		    ;; (setq func (func-search ctx item obj searched))
-		    (setq temp (func-search ctx item obj searched))
-		    (setq func (car temp))
-		    (setq searched (cdr temp))
-		    (when func (go RET))))
-		;; Break and return the found function
-	      RET (progn
-		    (cons func searched)))
-	     ;; Return the func in else
-	     (progn
+       (let ((union-val (assoc rule-set-name rule-set))
+	           (temp nil))
+	       ;; Check if this is a union of types
+	       (if (eq (caadr union-val) union-kw)
+	           ;; Walk through all the items in the type set
+	           (progn
+	             (block RET
+		             (loop for item in (cdadr union-val) do
+		               (when (not (find item searched))
+		                 ;; (setq func (func-search ctx item obj searched))
+		                 (setq temp (func-search ctx item obj searched))
+		                 (setq func (car temp))
+		                 (setq searched (cdr temp))
+		                 (when func (return-from RET)))))
+	             (cons func searched))
+	           ;; Return the func in else
+	           (cons func searched))
+	       ;; Return whatever is returned from the 
 	       (cons func searched)))
-	 ;; Return whatever is returned from the 
-	 (cons func searched)))
       ((cons func searched)))))
 
 (defun apply-rule-set (ctx rule-set-name obj &rest args)
   (let ((func (car (progn
-		     (func-search ctx rule-set-name obj '())))))
+		                 (func-search ctx rule-set-name obj '())))))
     ;; Expected func signature is: (<nam> ctx obj &rest args)
     (assert func (rule-set-name obj)
-	    "Cannot find function to apply to ~S." obj)
+	          "Cannot find function to apply to ~S~% with rule: ~S"
+	          obj rule-set-name)
     (cond
       ((= (length args) 0)
        (funcall func ctx (cdr obj)))
@@ -114,29 +114,54 @@
   "Print the value"
   (format t "~S" (car obj)))
 
+(defun print-brackets (ctx obj)
+  "Print the brackets"
+  (format t "(")
+  (apply-rule-set ctx 'expr (car obj))
+  (format t ")"))
+
+;; Statements
+(defun print-assign (ctx obj)
+  (apply-rule-set ctx 'expr (nth 0 obj))
+  (format t " = ")
+  (apply-rule-set ctx 'expr (nth 1 obj)))
+
+(defun print-seq (ctx obj)
+  (apply-rule-set ctx 'stmt (nth 0 obj))
+  (format t ";~%")
+  (apply-rule-set ctx 'stmt (nth 1 obj)))
+
 ;; We first instantite the context
 (defvar ctx)
 (setq ctx (make-context :ruleset '() :union-kw 'union))
 
 ;; Now we register these rules with the context
 (register-rule-set ctx `((math-expr . ((+ . print-plus)
-				       (- . print-sub)
-				       (* . print-mult)
-				       (/ . print-div)
-				       (% . print-mod)))
-			 (simple-expr . ((val . print-val)
-					 (var . print-var)))
-			 ;; This is the sum (union) type of the two
-			 ;; different types -- can have as many as you
-			 ;; want summed together.
-			 (expr . ((,(context-union-kw ctx) .
-				   (math-expr simple-expr))))))
+				                               (- . print-sub)
+				                               (* . print-mult)
+				                               (/ . print-div)
+				                               (% . print-mod)))
+			                   (simple-expr . ((val . print-val)
+					                               (var . print-var)
+					                               (brackets . print-brackets)))
+			                   (stmt . ((= . print-assign)
+				                          (seq . print-seq)))
+			                   ;; This is the sum (union) type of the two
+			                   ;; different types -- can have as many as you
+			                   ;; want summed together.
+			                   (expr . ((,(context-union-kw ctx) .
+                                    (math-expr simple-expr ))))))
 ;; Check if the rules have been registered
 ;; (print (context-ruleset ctx))
 ;; (print (context-union-kw ctx))
 
 ;; Example of the language
 (defvar example1)
-(setq example1 `(* (var x) (/ (var y) (val 100))))
+(setq example1 `(seq
+		             (= (var h) (% (var z) (val 100)))
+		             (seq
+		              (= (var z )
+		                 (* (brackets (+ (var z) (var x))) (/ (var y) (val 100))))
+		              (= (var z) (+ (var x) (val 10))))))
 ;; Now we apply and eval the example within the context
-(apply-rule-set ctx 'math-expr example1)
+(apply-rule-set ctx 'stmt example1)
