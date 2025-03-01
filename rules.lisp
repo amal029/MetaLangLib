@@ -65,6 +65,20 @@
        (funcall func ctx (cdr obj)))
       ((funcall func ctx (cdr obj) args)))))
 
+
+;; -------------------------- Types --------------------
+;; Normal types in the language
+(defun print-type (ctx obj)
+  (format t "~S " (car obj)))
+
+;; Pointer types in the language
+(defun print-ptrtype (ctx obj)
+  (format t "~S *" (car obj)))
+
+(defun print-structype (ctx obj)
+  (format t "struct ~S" (car obj)))
+
+;; ------------------------ Expressions --------------
 ;; Now write the rules for processing the expression above
 (defun print-plus (ctx obj)
   "Rule to print the + function in the language"
@@ -120,7 +134,15 @@
   (apply-rule-set ctx 'expr (car obj))
   (format t ")"))
 
-;; Statements
+(defun print-ptr (ctx obj)
+  (format t "* ")
+  (apply-rule-set ctx 'simple-expr (car obj)))
+
+(defun print-address (ctx obj)
+  (format t "& ")
+  (apply-rule-set ctx 'simple-expr (car obj)))
+
+;;------------------ Statements -----------------
 (defun print-assign (ctx obj)
   (apply-rule-set ctx 'expr (nth 0 obj))
   (format t " = ")
@@ -130,6 +152,25 @@
   (apply-rule-set ctx 'stmt (nth 0 obj))
   (format t ";~%")
   (apply-rule-set ctx 'stmt (nth 1 obj)))
+
+(defun print-defvar (ctx obj)
+  ;; types is {type, ptrtype, structtype}
+  (apply-rule-set ctx 'types (car obj))
+  (apply-rule-set ctx 'expr (cadr obj)))
+
+(defun print-defstruct (ctx obj)
+  ;; This should be only struct-type
+  (apply-rule-set ctx 'struct-type (car obj))
+  (apply-rule-set ctx 'stmt (cadr obj)))
+
+(defun print-deftype (ctx obj)
+  (apply-rule-set ctx 'struct-type (car obj))
+  (format t " ~S " (cadr obj)))
+
+(defun print-block (ctx obj)
+  (format t "{~%")
+  (apply-rule-set ctx 'stmt (car obj))
+  (format t "}~%"))
 
 ;; We first instantite the context
 (defvar ctx)
@@ -160,7 +201,7 @@
 (setq example1 `(seq
 		             (= (var h) (% (var z) (val 100)))
 		             (seq
-		              (= (var z )
+		              (= (var z)
 		                 (* (brackets (+ (var z) (var x))) (/ (var y) (val 100))))
 		              (= (var z) (+ (var x) (val 10))))))
 ;; Now we apply and eval the example within the context
