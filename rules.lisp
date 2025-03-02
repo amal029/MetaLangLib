@@ -53,123 +53,152 @@
 	       (cons func searched)))
       ((cons func searched)))))
 
-(defun apply-rule-set (ctx rule-set-name obj &rest args)
+(defun apply-rule-set (ctx rule-set-name obj args)
   (let ((func (car (progn
-		                 (func-search ctx rule-set-name obj '())))))
+		     (func-search ctx rule-set-name obj '())))))
     ;; Expected func signature is: (<nam> ctx obj &rest args)
     (assert func (rule-set-name obj)
 	          "Cannot find function to apply to ~S~% with rule: ~S"
 	          obj rule-set-name)
-    (cond
-      ((= (length args) 0)
-       (funcall func ctx (cdr obj)))
-      ((funcall func ctx (cdr obj) args)))))
+    (funcall func ctx (cdr obj) args)))
 
+;; --------------- Generic functions for eval------------
+(defgeneric eval-var (ctx obj backend))
+(defgeneric eval-seq (ctx obj backend))
+(defgeneric eval-assign (ctx obj backend))
+(defgeneric eval-type (ctx obj backend))
+(defgeneric eval-prttype (ctx obj backend))
+(defgeneric eval-structype (ctx obj backend))
+(defgeneric eval-plus (ctx obj backend))
+(defgeneric eval-sub (ctx obj backend))
+(defgeneric eval-mult (ctx obj backend))
+(defgeneric eval-div (ctx obj backend))
+(defgeneric eval-mod (ctx obj backend))
+(defgeneric eval-brackets (ctx obj backend))
+(defgeneric eval-ptr (ctx obj backend))
+(defgeneric eval-address (ctx obj backend))
+(defgeneric eval-defvar (ctx obj backend))
+(defgeneric eval-defstruct (ctx obj backend))
+(defgeneric eval-deftype (ctx obj backend))
+(defgeneric eval-block (ctx obj backend))
+
+;; Make a class on which the methods will be specialised
+(defclass debug-backend ()
+  ((my-stream :accessor my-stream
+	      :initarg :my-stream
+	      :initform (make-string-output-stream)
+	      :documentation "Stream to produce the output to")
+   (my-name :accessor my-name :initarg :my-name
+	    :initform "Debug"
+	    :documentation "What type of backend am i?")
+   (my-map :accessor my-map
+	   :initform (make-hash-table :size 100)
+	   :initarg :my-map)))
 
 ;; -------------------------- Types --------------------
-;; Normal types in the language
-(defun print-type (ctx obj)
+;; Normal types in the language -- specialised on the 3rd arg
+(defmethod eval-type (ctx obj (backend debug-backend))
+  (declare (ignorable ctx))
   (format t "~S " (car obj)))
 
 ;; Pointer types in the language
-(defun print-ptrtype (ctx obj)
+(defmethod eval-ptrtype (ctx obj (backend debug-backend))
   (format t "~S *" (car obj)))
 
-(defun print-structype (ctx obj)
+(defmethod eval-structype (ctx obj (backend debug-backend))
   (format t "struct ~S" (car obj)))
 
 ;; ------------------------ Expressions --------------
 ;; Now write the rules for processing the expression above
-(defun print-plus (ctx obj)
+(defmethod eval-plus (ctx obj (backend debug-backend))
   "Rule to print the + function in the language"
   (progn
-    (apply-rule-set ctx 'expr (nth 0 obj))
+    (apply-rule-set ctx 'expr (nth 0 obj) backend)
     (format t "~S" '+)
-    (apply-rule-set ctx 'expr (nth 1 obj))))
+    (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 ;; Now write the rules for processing the expression above
-(defun print-sub (ctx obj)
+(defmethod eval-sub (ctx obj (backend debug-backend))
   "Rule to print the - function in the language"
   (progn
-    (apply-rule-set ctx 'expr (nth 0 obj))
+    (apply-rule-set ctx 'expr (nth 0 obj) backend)
     (format t "~S" '-)
-    (apply-rule-set ctx 'expr (nth 1 obj))))
+    (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 ;; Now write the rules for processing the expression above
-(defun print-mult (ctx obj)
+(defmethod eval-mult (ctx obj (backend debug-backend))
   "Rule to print the * function in the language"
   (progn
-    (apply-rule-set ctx 'expr (nth 0 obj))
+    (apply-rule-set ctx 'expr (nth 0 obj) backend)
     (format t "~S" '*)
-    (apply-rule-set ctx 'expr (nth 1 obj))))
+    (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 ;; Now write the rules for processing the expression above
-(defun print-div (ctx obj)
+(defmethod eval-div (ctx obj (backend debug-backend))
   "Rule to print / function in the language"
   (progn
-    (apply-rule-set ctx 'expr (nth 0 obj))
+    (apply-rule-set ctx 'expr (nth 0 obj) backend)
     (format t "~S" '/)
-    (apply-rule-set ctx 'expr (nth 1 obj))))
+    (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 ;; Now write the rules for processing the expression above
-(defun print-mod (ctx obj)
+(defmethod eval-mod (ctx obj (backend debug-backend))
   "Rule to print the % function in the language"
   (progn
-    (apply-rule-set ctx 'expr (nth 0 obj))
+    (apply-rule-set ctx 'expr (nth 0 obj) backend)
     (format t "~S" '%)
-    (apply-rule-set ctx 'expr (nth 1 obj))))
+    (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
-
-(defun print-var (ctx obj)
-  "Print the variable name"
-  (format t "~S" (car obj)))
-
-(defun print-val (ctx obj)
+(defmethod eval-val (ctx obj (backend debug-backend))
   "Print the value"
   (format t "~S" (car obj)))
 
-(defun print-brackets (ctx obj)
+(defmethod eval-var (ctx obj (backend debug-backend))
+  "Print the variable name"
+  (format t "~S" (car obj)))
+
+(defmethod eval-brackets (ctx obj (backend debug-backend))
   "Print the brackets"
   (format t "(")
-  (apply-rule-set ctx 'expr (car obj))
+  (apply-rule-set ctx 'expr (car obj) backend)
   (format t ")"))
 
-(defun print-ptr (ctx obj)
+(defmethod eval-ptr (ctx obj (backend debug-backend))
   (format t "* ")
-  (apply-rule-set ctx 'simple-expr (car obj)))
+  (apply-rule-set ctx 'simple-expr (car obj) backend))
 
-(defun print-address (ctx obj)
+(defmethod eval-address (ctx obj (backend debug-backend))
   (format t "& ")
-  (apply-rule-set ctx 'simple-expr (car obj)))
+  (apply-rule-set ctx 'simple-expr (car obj) backend))
 
 ;;------------------ Statements -----------------
-(defun print-assign (ctx obj)
-  (apply-rule-set ctx 'expr (nth 0 obj))
+(defmethod eval-assign (ctx obj (backend debug-backend))
+  (apply-rule-set ctx 'expr (nth 0 obj) backend)
   (format t " = ")
-  (apply-rule-set ctx 'expr (nth 1 obj)))
+  (apply-rule-set ctx 'expr (nth 1 obj) backend))
 
-(defun print-seq (ctx obj)
-  (apply-rule-set ctx 'stmt (nth 0 obj))
+(defmethod eval-seq (ctx obj (backend debug-backend))
+  (apply-rule-set ctx 'stmt (nth 0 obj) backend)
   (format t ";~%")
-  (apply-rule-set ctx 'stmt (nth 1 obj)))
+  (apply-rule-set ctx 'stmt (nth 1 obj) backend))
 
-(defun print-defvar (ctx obj)
+(defmethod eval-defvar (ctx obj (backend debug-backend))
   ;; types is {type, ptrtype, structtype}
-  (apply-rule-set ctx 'types (car obj))
-  (apply-rule-set ctx 'expr (cadr obj)))
+  (apply-rule-set ctx 'types (car obj) backend)
+  (apply-rule-set ctx 'expr (cadr obj) backend))
 
-(defun print-defstruct (ctx obj)
+(defmethod eval-defstruct (ctx obj (backend debug-backend))
   ;; This should be only struct-type
-  (apply-rule-set ctx 'struct-type (car obj))
-  (apply-rule-set ctx 'stmt (cadr obj)))
+  (apply-rule-set ctx 'struct-type (car obj) backend)
+  (apply-rule-set ctx 'stmt (cadr obj) backend))
 
-(defun print-deftype (ctx obj)
-  (apply-rule-set ctx 'struct-type (car obj))
+(defmethod eval-deftype (ctx obj (backend debug-backend))
+  (apply-rule-set ctx 'struct-type (car obj) backend)
   (format t " ~S " (cadr obj)))
 
-(defun print-block (ctx obj)
+(defmethod eval-block (ctx obj (backend debug-backend))
   (format t "{~%")
-  (apply-rule-set ctx 'stmt (car obj))
+  (apply-rule-set ctx 'stmt (car obj) backend)
   (format t "}~%"))
 
 ;; We first instantite the context
@@ -177,32 +206,46 @@
 (setq ctx (make-context :ruleset '() :union-kw 'union))
 
 ;; Now we register these rules with the context
-(register-rule-set ctx `((math-expr . ((+ . print-plus)
-				                               (- . print-sub)
-				                               (* . print-mult)
-				                               (/ . print-div)
-				                               (% . print-mod)))
-			                   (simple-expr . ((val . print-val)
-					                               (var . print-var)
-					                               (brackets . print-brackets)))
-			                   (stmt . ((= . print-assign)
-				                          (seq . print-seq)))
-			                   ;; This is the sum (union) type of the two
-			                   ;; different types -- can have as many as you
-			                   ;; want summed together.
-			                   (expr . ((,(context-union-kw ctx) .
-                                    (math-expr simple-expr ))))))
+(register-rule-set ctx `((math-expr . ((+ . eval-plus)
+				       (- . eval-sub)
+				       (* . eval-mult)
+				       (/ . eval-div)
+				       (% . eval-mod)))
+			 (simple-expr . ((val . eval-val)
+					 (var . eval-var)
+					 (brackets . eval-brackets)))
+			 (stmt . ((= . eval-assign)
+				  (seq . eval-seq)))
+			 ;; This is the sum (union) type of the two
+			 ;; different types -- can have as many as you
+			 ;; want summed together.
+			 (expr . ((,(context-union-kw ctx) .
+				  (math-expr simple-expr ))))))
 ;; Check if the rules have been registered
 ;; (print (context-ruleset ctx))
 ;; (print (context-union-kw ctx))
 
+
+
+
 ;; Example of the language
 (defvar example1)
 (setq example1 `(seq
-		             (= (var h) (% (var z) (val 100)))
-		             (seq
-		              (= (var z)
-		                 (* (brackets (+ (var z) (var x))) (/ (var y) (val 100))))
-		              (= (var z) (+ (var x) (val 10))))))
+		 (= (var h) (% (var z) (val 100)))
+		 (seq
+		  (= (var z)
+		     (* (brackets (+ (var z) (var x))) (/ (var y) (val 100))))
+		  (= (var z) (+ (var x) (val 10))))))
+
+;; ;; Make the backend instance
+(defvar my-debug)
+(setq my-debug (make-instance 'debug-backend))
+
 ;; Now we apply and eval the example within the context
-(apply-rule-set ctx 'stmt example1)
+(apply-rule-set ctx 'stmt example1 my-debug)
+
+;; Example-2 (a simpler example)
+(defvar e2)
+(setq e2 `(+ (var x) (val 10)))
+
+(apply-rule-set ctx 'math-expr e2 my-debug)
