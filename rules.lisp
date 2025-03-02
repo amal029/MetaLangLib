@@ -99,14 +99,14 @@
 ;; Normal types in the language -- specialised on the 3rd arg
 (defmethod eval-type (ctx obj (backend debug-backend))
   (declare (ignorable ctx))
-  (format t "~S " (car obj)))
+  (format (my-stream backend) "~S " (car obj)))
 
 ;; Pointer types in the language
 (defmethod eval-ptrtype (ctx obj (backend debug-backend))
-  (format t "~S *" (car obj)))
+  (format (my-stream backend) "~S *" (car obj)))
 
 (defmethod eval-structype (ctx obj (backend debug-backend))
-  (format t "struct ~S" (car obj)))
+  (format (my-stream backend) "struct ~S" (car obj)))
 
 ;; ------------------------ Expressions --------------
 ;; Now write the rules for processing the expression above
@@ -114,7 +114,7 @@
   "Rule to print the + function in the language"
   (progn
     (apply-rule-set ctx 'expr (nth 0 obj) backend)
-    (format t "~S" '+)
+    (format (my-stream backend) "~S" '+)
     (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 ;; Now write the rules for processing the expression above
@@ -122,7 +122,7 @@
   "Rule to print the - function in the language"
   (progn
     (apply-rule-set ctx 'expr (nth 0 obj) backend)
-    (format t "~S" '-)
+    (format (my-stream backend) "~S" '-)
     (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 ;; Now write the rules for processing the expression above
@@ -130,7 +130,7 @@
   "Rule to print the * function in the language"
   (progn
     (apply-rule-set ctx 'expr (nth 0 obj) backend)
-    (format t "~S" '*)
+    (format (my-stream backend) "~S" '*)
     (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 ;; Now write the rules for processing the expression above
@@ -138,7 +138,7 @@
   "Rule to print / function in the language"
   (progn
     (apply-rule-set ctx 'expr (nth 0 obj) backend)
-    (format t "~S" '/)
+    (format (my-stream backend) "~S" '/)
     (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 ;; Now write the rules for processing the expression above
@@ -146,60 +146,65 @@
   "Rule to print the % function in the language"
   (progn
     (apply-rule-set ctx 'expr (nth 0 obj) backend)
-    (format t "~S" '%)
+    (format (my-stream backend) "~S" '%)
     (apply-rule-set ctx 'expr (nth 1 obj) backend)))
 
 (defmethod eval-val (ctx obj (backend debug-backend))
   "Print the value"
-  (format t "~S" (car obj)))
+  (format (my-stream backend) "~S" (car obj)))
 
 (defmethod eval-var (ctx obj (backend debug-backend))
   "Print the variable name"
-  (format t "~S" (car obj)))
+  (format (my-stream backend) "~S" (car obj)))
 
 (defmethod eval-brackets (ctx obj (backend debug-backend))
   "Print the brackets"
-  (format t "(")
+  (format (my-stream backend) "(")
   (apply-rule-set ctx 'expr (car obj) backend)
-  (format t ")"))
+  (format (my-stream backend) ")"))
 
 (defmethod eval-ptr (ctx obj (backend debug-backend))
-  (format t "* ")
+  (format (my-stream backend) " * ")
   (apply-rule-set ctx 'simple-expr (car obj) backend))
 
 (defmethod eval-address (ctx obj (backend debug-backend))
-  (format t "& ")
+  (format (my-stream backend) "& ")
   (apply-rule-set ctx 'simple-expr (car obj) backend))
 
 ;;------------------ Statements -----------------
 (defmethod eval-assign (ctx obj (backend debug-backend))
   (apply-rule-set ctx 'expr (nth 0 obj) backend)
-  (format t " = ")
-  (apply-rule-set ctx 'expr (nth 1 obj) backend))
+  (format (my-stream backend) " = ")
+  (apply-rule-set ctx 'expr (nth 1 obj) backend)
+  (format (my-stream backend) ";~%"))
 
 (defmethod eval-seq (ctx obj (backend debug-backend))
   (apply-rule-set ctx 'stmt (nth 0 obj) backend)
-  (format t ";~%")
+  ;; (format (my-stream backend) ";~%")
   (apply-rule-set ctx 'stmt (nth 1 obj) backend))
 
 (defmethod eval-defvar (ctx obj (backend debug-backend))
   ;; types is {type, ptrtype, structtype}
   (apply-rule-set ctx 'types (car obj) backend)
-  (apply-rule-set ctx 'expr (cadr obj) backend))
+  (apply-rule-set ctx 'expr (cadr obj) backend)
+  (format (my-stream backend) ";~%"))
 
 (defmethod eval-defstruct (ctx obj (backend debug-backend))
   ;; This should be only struct-type
   (apply-rule-set ctx 'struct-type (car obj) backend)
-  (apply-rule-set ctx 'stmt (cadr obj) backend))
+  (apply-rule-set ctx 'stmt (cadr obj) backend)
+  (format (my-stream backend) ";~%"))
 
 (defmethod eval-deftype (ctx obj (backend debug-backend))
   (apply-rule-set ctx 'struct-type (car obj) backend)
-  (format t " ~S " (cadr obj)))
+  (format (my-stream backend) " ~S " (cadr obj))
+  (format (my-stream backend) ";~%"))
 
 (defmethod eval-block (ctx obj (backend debug-backend))
-  (format t "{~%")
+  (format (my-stream backend) "{~%")
   (apply-rule-set ctx 'stmt (car obj) backend)
-  (format t "}~%"))
+  (format (my-stream backend) "}~%")
+  (format (my-stream backend) ";~%"))
 
 ;; We first instantite the context
 (defvar ctx)
@@ -215,7 +220,11 @@
 					 (var . eval-var)
 					 (brackets . eval-brackets)))
 			 (stmt . ((= . eval-assign)
-				  (seq . eval-seq)))
+				  (seq . eval-seq)
+				  (defvar . eval-defvar)
+				  (defstruct . eval-defstruct)
+				  (deftype . eval-deftype)
+				  (block . eval-block)))
 			 ;; This is the sum (union) type of the two
 			 ;; different types -- can have as many as you
 			 ;; want summed together.
@@ -224,9 +233,6 @@
 ;; Check if the rules have been registered
 ;; (print (context-ruleset ctx))
 ;; (print (context-union-kw ctx))
-
-
-
 
 ;; Example of the language
 (defvar example1)
@@ -249,3 +255,6 @@
 (setq e2 `(+ (var x) (val 10)))
 
 (apply-rule-set ctx 'math-expr e2 my-debug)
+
+;; Print the output from the debug
+(format t (get-output-stream-string (my-stream my-debug)))
