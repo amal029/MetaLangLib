@@ -84,8 +84,6 @@
 (defgeneric eval-defun (ctx obj backend))
 (defgeneric eval-funcall (ctx obj backend))
 (defgeneric eval-if-else (ctx obj backend))
-
-;TODO: These still need to be implemented
 (defgeneric eval-and (ctx obj backend))
 (defgeneric eval-or (ctx obj backend))
 (defgeneric eval-lt (ctx obj backend))
@@ -181,7 +179,7 @@
 
 ;; Example (deref x) => *x
 (defmethod eval-deref (ctx obj (backend debug-backend))
-  (format (my-stream backend) " *")
+  (format (my-stream backend) "*")
   (apply-rule-set ctx 'simple-expr (car obj) backend))
 
 (defmethod eval-address (ctx obj (backend debug-backend))
