@@ -86,6 +86,7 @@
 (defgeneric eval-if-else (ctx obj backend))
 (defgeneric eval-and (ctx obj backend))
 (defgeneric eval-or (ctx obj backend))
+(defgeneric eval-not (ctx obj backend))
 (defgeneric eval-lt (ctx obj backend))
 (defgeneric eval-leq (ctx obj backend))
 (defgeneric eval-gt (ctx obj backend))
@@ -180,10 +181,11 @@
 ;; Example (deref x) => *x
 (defmethod eval-deref (ctx obj (backend debug-backend))
   (format (my-stream backend) "*")
+  ;; (print (car obj))
   (apply-rule-set ctx 'simple-expr (car obj) backend))
 
 (defmethod eval-address (ctx obj (backend debug-backend))
-  (format (my-stream backend) "& ")
+  (format (my-stream backend) "&")
   (apply-rule-set ctx 'simple-expr (car obj) backend))
 
 ;; -----------------Logical Expressions-----------
@@ -265,18 +267,18 @@
 (defmethod eval-defun (ctx obj (backend debug-backend))
   ;; Define the output type
   (apply-rule-set ctx 'types (third obj) backend)
-  (format (my-stream backend) (first obj))
+  (format (my-stream backend) " ~S"(first obj))
   ;; Get all the parameters in a string
   (format (my-stream backend) "(")
   (loop for i in (second obj) do
     (progn
       (apply-rule-set ctx 'types (car i) backend)
       (apply-rule-set ctx 'expr (cadr i) backend)
-      (when (not (eq i (last (second obj))))
+      (when (not (eq i (car (last (second obj)))))
 	(format (my-stream backend) ", "))))
   (format (my-stream backend) ")")
   ;; define the body of the function
-  (apply-rule-set ctx 'stmt (last obj) backend))
+  (apply-rule-set ctx 'stmt (car (last obj)) backend))
 
 ;; This should be an expression
 ;; Example (funcall f ((var x) (var y)) (block (...)))
@@ -314,9 +316,18 @@
 				       (* . eval-mult)
 				       (/ . eval-div)
 				       (% . eval-mod)))
+			 (logical-expr . ((>= . eval-geq)
+					  (> . eval-gt)
+					  (<= . eval-leq)
+					  (< . eval-lt)
+					  (or . eval-or)
+					  (and . eval-and)
+					  (not . eval-not)))
 			 (types . ((type . eval-type)
-				   (ptr . eval-ptrtype)
+				   (ptrtype . eval-ptrtype)
 				   (struct . eval-structype)))
+			 (add-expr . ((address . eval-address)
+				      (deref . eval-deref)))
 			 (simple-expr . ((val . eval-val)
 					 (var . eval-var)
 					 (brackets . eval-brackets)))
@@ -334,7 +345,7 @@
 			 ;; different types -- can have as many as you
 			 ;; want summed together.
 			 (expr . ((,(context-union-kw ctx) .
-				  (math-expr simple-expr ))))))
+				  (math-expr simple-expr add-expr))))))
 ;; Check if the rules have been registered
 ;; (print (context-ruleset ctx))
 ;; (print (context-union-kw ctx))
@@ -366,5 +377,11 @@
 (format t (get-output-stream-string (my-stream my-debug)))
 
 ;; Example of a function definition
-(setq e2 `(defun F (((type int) (var x)) ((ptrtype (type float)) (var y)))
-	    (block (seq (= (var x) (address y)) (= (ptr x) (val 10))))))
+(setq e2 `(defun F
+	      (((type int) (var x)) ((ptrtype (type float)) (var y))) ;the input params
+	    (type void)			;the output type
+	    (block (seq (= (var x) (address (var y))) (= (deref (var x)) (val 10)))))) ;the body
+
+(apply-rule-set ctx 'stmt e2 my-debug)
+(format t "~%")
+(format t (get-output-stream-string (my-stream my-debug)))
