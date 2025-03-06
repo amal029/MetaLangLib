@@ -314,6 +314,9 @@
 				       (* . eval-mult)
 				       (/ . eval-div)
 				       (% . eval-mod)))
+			 (types . ((type . eval-type)
+				   (ptr . eval-ptrtype)
+				   (struct . eval-structype)))
 			 (simple-expr . ((val . eval-val)
 					 (var . eval-var)
 					 (brackets . eval-brackets)))
@@ -322,7 +325,11 @@
 				  (defvar . eval-defvar)
 				  (defstruct . eval-defstruct)
 				  (deftype . eval-deftype)
-				  (block . eval-block)))
+				  (block . eval-block)
+				  (if-else . eval-if-else)
+				  (funcall . eval-funcall)
+				  (defun . eval-defun)
+				  (deftype . eval-deftype)))
 			 ;; This is the sum (union) type of the two
 			 ;; different types -- can have as many as you
 			 ;; want summed together.
@@ -341,6 +348,7 @@
 		     (* (brackets (+ (var z) (var x))) (/ (var y) (val 100))))
 		  (= (var z) (+ (var x) (val 10))))))
 
+
 ;; ;; Make the backend instance
 (defvar my-debug)
 (setq my-debug (make-instance 'debug-backend))
@@ -356,3 +364,7 @@
 
 ;; Print the output from the debug
 (format t (get-output-stream-string (my-stream my-debug)))
+
+;; Example of a function definition
+(setq e2 `(defun F (((type int) (var x)) ((ptrtype (type float)) (var y)))
+	    (block (seq (= (var x) (address y)) (= (ptr x) (val 10))))))
