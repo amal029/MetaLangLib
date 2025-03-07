@@ -92,6 +92,7 @@
 (defgeneric eval-gt (ctx obj backend))
 (defgeneric eval-geq (ctx obj backend))
 (defgeneric eval-leq (ctx obj backend))
+(defgeneric eval-nothing (ctx obj backend))
 
 ;; Make a class on which the methods will be specialised
 (defclass debug-backend ()
@@ -189,7 +190,6 @@
   (apply-rule-set ctx 'simple-expr (car obj) backend))
 
 ;; -----------------Logical Expressions-----------
-
 (defmethod eval-and (ctx obj backend)
   (apply-rule-set ctx 'expr (car obj) backend)
   (format (my-stream backend) " && ")
@@ -226,6 +226,9 @@
   (apply-rule-set ctx 'expr (cadr obj) backend))
 
 ;;------------------ Statements -----------------
+(defmethod eval-nothing (ctx obj (backend debug-backend))
+  (format (my-stream backend) ";~%"))
+
 (defmethod eval-assign (ctx obj (backend debug-backend))
   (apply-rule-set ctx 'expr (nth 0 obj) backend)
   (format (my-stream backend) " = ")
@@ -293,8 +296,9 @@
 	  (format (my-stream backend) ", ")
 	else do
 	  (apply-rule-set ctx 'expr i backend))
-  (format (my-stream backend) ")")
-  (apply-rule-set ctx 'stmt (last obj) backend))
+  (format (my-stream backend) ");")
+  ;; (apply-rule-set ctx 'stmt (last obj) backend)
+  )
 
 ;; Example (if-else (logical-expr x) (block ) (block))
 ;FIXME: Still need to add the logical-expr
@@ -340,12 +344,13 @@
 				  (if-else . eval-if-else)
 				  (funcall . eval-funcall)
 				  (defun . eval-defun)
-				  (deftype . eval-deftype)))
+				  (deftype . eval-deftype)
+				  (nothing . eval-nothing)))
 			 ;; This is the sum (union) type of the two
 			 ;; different types -- can have as many as you
 			 ;; want summed together.
 			 (expr . ((,(context-union-kw ctx) .
-				  (math-expr simple-expr add-expr))))))
+				    (math-expr simple-expr add-expr logical-expr))))))
 ;; Check if the rules have been registered
 ;; (print (context-ruleset ctx))
 ;; (print (context-union-kw ctx))
@@ -377,11 +382,19 @@
 (format t (get-output-stream-string (my-stream my-debug)))
 
 ;; Example of a function definition
-(setq e2 `(defun F
-	      (((type int) (var x)) ((ptrtype (type float)) (var y))) ;the input params
-	    (type void)			;the output type
-	    (block (seq (= (var x) (address (var y))) (= (deref (var x)) (val 10)))))) ;the body
+(setq e2 `(seq
+	   (if-else (and (var h) (brackets (or (>= (var x) (val 10)) (< (var t) (val 100)))))
+		    (block (= (var x) (val 100)))
+		    (block (nothing)))
+	   (seq (defun F
+		    (((type int) (var x)) ((ptrtype (type float)) (var y))) ;the input params
+		  (type void)			;the output type
+		  (block (seq (= (var x) (address (var y))) (= (deref (var x)) (val 10)))))
+		(funcall F
+			 ((val 10) (address (var h))))))) ;the body
 
 (apply-rule-set ctx 'stmt e2 my-debug)
 (format t "~%")
 (format t (get-output-stream-string (my-stream my-debug)))
+
+;; Now need to write a evaluator (semantics)
