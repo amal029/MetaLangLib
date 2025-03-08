@@ -1,4 +1,3 @@
-(load "rules")
 (defpackage :clang
   (:use :rules :cl))
 
@@ -211,8 +210,7 @@
 (defmethod eval-defvar (ctx obj (backend debug-backend))
   ;; types is {type, ptrtype, structtype}
   (apply-rule-set ctx 'types (car obj) backend)
-  (apply-rule-set ctx 'expr (cadr obj) backend)
-  (format (my-stream backend) ";~%"))
+  (apply-rule-set ctx 'expr (cadr obj) backend))
 
 (defmethod eval-defstruct (ctx obj (backend debug-backend))
   ;; This should be only struct-type
@@ -287,6 +285,7 @@
 					  (or . eval-or)
 					  (and . eval-and)
 					  (not . eval-not)))
+			 (decl-expr . ((defvar . eval-defvar)))
 			 (types . ((type . eval-type)
 				   (ptrtype . eval-ptrtype)
 				   (struct . eval-structype)))
@@ -297,7 +296,6 @@
 					 (brackets . eval-brackets)))
 			 (stmt . ((= . eval-assign)
 				  (seq . eval-seq)
-				  (defvar . eval-defvar)
 				  (defstruct . eval-defstruct)
 				  (deftype . eval-deftype)
 				  (block . eval-block)
@@ -305,12 +303,15 @@
 				  (funcall . eval-funcall)
 				  (defun . eval-defun)
 				  (deftype . eval-deftype)
-				  (nothing . eval-nothing)))
+				  (nothing . eval-nothing)
+				  (for . eval-for)
+				  (while . eval-while)))
 			 ;; This is the sum (union) type of the two
 			 ;; different types -- can have as many as you
 			 ;; want summed together.
 			 (expr . ((,(rules::context-union-kw ctx) .
-				    (math-expr simple-expr add-expr logical-expr))))))
+				    (math-expr simple-expr add-expr
+				     logical-expr									     decl-expr))))))
 
 ;; Example of the language
 (defvar example1)
@@ -356,3 +357,14 @@
 (apply-rule-set ctx 'stmt e2 my-debug)
 (format t "~%")
 (format t (get-output-stream-string (my-stream my-debug)))
+
+;TODO: Test how the for statement performs -- rewrite and produce c-code
+(setq e3 `(for ((= (defvar (type int) (var i)) (val 0))
+		(< (var i) (val 10))
+		(= (var i) (+ (var i) (val 1))))
+	       ;; The body
+	       (= (var j) (* (var j) (val 100)))))
+(defparameter my-rewrite (make-instance 'rewrite))
+(apply-rule-set ctx 'stmt e3 my-rewrite)
+(format t "~%")
+(format t (get-output-stream-string (my-stream my-rewrite)))
