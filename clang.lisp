@@ -7,6 +7,7 @@
 
 ;; --------------- Generic functions for eval------------
 (defgeneric eval-var (ctx obj backend))
+(defgeneric eval-lvar (ctx obj backend))
 (defgeneric eval-seq (ctx obj backend))
 (defgeneric eval-assign (ctx obj backend))
 (defgeneric eval-type (ctx obj backend))
@@ -119,6 +120,10 @@
   (format (my-stream backend) "~S" (car obj)))
 
 (defmethod eval-var (ctx obj (backend debug-backend))
+  "Print the variable name"
+  (format (my-stream backend) "~S" (car obj)))
+
+(defmethod eval-lvar (ctx obj (backend debug-backend))
   "Print the variable name"
   (format (my-stream backend) "~S" (car obj)))
 
@@ -310,6 +315,7 @@
 				      (deref . eval-deref)))
 			 (simple-expr . ((val . eval-val)
 					 (var . eval-var)
+					 (lvar . eval-lvar)
 					 (brackets . eval-brackets)))
 			 (stmt . ((= . eval-assign)
 				  (seq . eval-seq)
@@ -380,7 +386,7 @@
 (defvar e3)
 (setq e3 `(for ((= (defvar (type int) (var i)) (val 0))
 		(< (var i) (val 10))
-		(= (var i) (+ (var i) (val 1))))
+		(= (lvar i) (+ (var i) (val 1))))
 	       ;; The body
 	       (= (var j) (* (var j) (val 100)))))
 (defparameter my-rewrite (make-instance 'rewrite))

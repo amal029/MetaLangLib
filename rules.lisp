@@ -65,4 +65,3 @@
 	          "Cannot find function to apply to ~S~% with rule: ~S"
 	          obj rule-set-name)
     (funcall func ctx (cdr obj) backend)))
-
