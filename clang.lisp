@@ -311,7 +311,7 @@
 			 ;; want summed together.
 			 (expr . ((,(rules::context-union-kw ctx) .
 				    (math-expr simple-expr add-expr
-				     logical-expr									     decl-expr))))))
+				     logical-expr decl-expr))))))
 
 ;; Example of the language
 (defvar example1)
@@ -359,6 +359,7 @@
 (format t (get-output-stream-string (my-stream my-debug)))
 
 ;TODO: Test how the for statement performs -- rewrite and produce c-code
+(defvar e3)
 (setq e3 `(for ((= (defvar (type int) (var i)) (val 0))
 		(< (var i) (val 10))
 		(= (var i) (+ (var i) (val 1))))
