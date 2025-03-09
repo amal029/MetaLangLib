@@ -1,5 +1,7 @@
 (defpackage :clang
-  (:use :rules :cl))
+  (:use :rules :cl)
+  (:export
+   #:rewrite #:eval-seq #:ctx))
 
 (in-package :clang)
 
@@ -35,6 +37,7 @@
 (defgeneric eval-leq (ctx obj backend))
 (defgeneric eval-nothing (ctx obj backend))
 (defgeneric eval-while (ctx obj backend))
+(defgeneric eval-return (ctx obj backend))
 
 ;; Make a class on which the methods will be specialised
 (defclass debug-backend ()
@@ -178,6 +181,13 @@
   (format (my-stream backend) ")")
   (apply-rule-set ctx 'stmt (cadr obj) backend))
 
+
+(defmethod eval-return (ctx obj (backend debug-backend))
+  (format (my-stream backend) "return ")
+  (apply-rule-set ctx 'expr (car obj) backend)
+  ;; (format (my-stream backend) ";~%")
+  )
+
 (defmethod eval-for (ctx obj (backend rewrite))
   "This method rewrites the for loop into a while loop"
   ;; First we make the initial variable
@@ -195,17 +205,21 @@
 
 
 (defmethod eval-nothing (ctx obj (backend debug-backend))
-  (format (my-stream backend) ";~%"))
+  ;; (format (my-stream backend) ";~%")
+  )
 
 (defmethod eval-assign (ctx obj (backend debug-backend))
   (apply-rule-set ctx 'expr (nth 0 obj) backend)
   (format (my-stream backend) " = ")
   (apply-rule-set ctx 'expr (nth 1 obj) backend)
-  (format (my-stream backend) ";~%"))
+  ;; (format (my-stream backend) ";~%")
+  )
 
 (defmethod eval-seq (ctx obj (backend debug-backend))
   (apply-rule-set ctx 'stmt (nth 0 obj) backend)
-  (apply-rule-set ctx 'stmt (nth 1 obj) backend))
+  (format (my-stream backend) ";~%")
+  (apply-rule-set ctx 'stmt (nth 1 obj) backend)
+  (format (my-stream backend) ";~%"))
 
 (defmethod eval-defvar (ctx obj (backend debug-backend))
   ;; types is {type, ptrtype, structtype}
@@ -216,17 +230,19 @@
   ;; This should be only struct-type
   (apply-rule-set ctx 'struct-type (car obj) backend)
   (apply-rule-set ctx 'stmt (cadr obj) backend)
-  (format (my-stream backend) ";~%"))
+  ;; (format (my-stream backend) ";~%")
+  )
 
 (defmethod eval-deftype (ctx obj (backend debug-backend))
   (apply-rule-set ctx 'struct-type (car obj) backend)
   (format (my-stream backend) " ~S " (cadr obj))
-  (format (my-stream backend) ";~%"))
+  ;; (format (my-stream backend) ";~%")
+  )
 
 (defmethod eval-block (ctx obj (backend debug-backend))
   (format (my-stream backend) "{~%")
   (apply-rule-set ctx 'stmt (car obj) backend)
-  (format (my-stream backend) "}~%"))
+  (format (my-stream backend) "}"))
 
 (defmethod eval-defun (ctx obj (backend debug-backend))
   ;; Define the output type
@@ -256,7 +272,7 @@
 	  (format (my-stream backend) ", ")
 	else do
 	  (apply-rule-set ctx 'expr i backend))
-  (format (my-stream backend) ");")
+  (format (my-stream backend) ")")
   ;; (apply-rule-set ctx 'stmt (last obj) backend)
   )
 
@@ -286,6 +302,7 @@
 					  (and . eval-and)
 					  (not . eval-not)))
 			 (decl-expr . ((defvar . eval-defvar)))
+			 (func-expr . ((funcall . eval-funcall)))
 			 (types . ((type . eval-type)
 				   (ptrtype . eval-ptrtype)
 				   (struct . eval-structype)))
@@ -305,13 +322,14 @@
 				  (deftype . eval-deftype)
 				  (nothing . eval-nothing)
 				  (for . eval-for)
-				  (while . eval-while)))
+				  (while . eval-while)
+				  (return . eval-return)))
 			 ;; This is the sum (union) type of the two
 			 ;; different types -- can have as many as you
 			 ;; want summed together.
 			 (expr . ((,(rules::context-union-kw ctx) .
 				    (math-expr simple-expr add-expr
-				     logical-expr decl-expr))))))
+				     logical-expr decl-expr func-expr))))))
 
 ;; Example of the language
 (defvar example1)

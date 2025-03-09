@@ -1,8 +1,7 @@
-(defpackage :interpretor
-  (:use :clang :rules :cl))
+(load (merge-pathnames "rules.lisp"))
+(load (merge-pathnames "clang.lisp"))
 
-(in-package :interpretor)
-
+(in-package :clang)
 
 ;; Trying the type of class I want for the interpreter .GF is the hash
 ;; table of symbol name to function body. GV is is the hash map from
@@ -19,5 +18,13 @@
   (setq value (loop for i = (read-preserving-whitespace fd nil nil)
 		    while i collect i into value
 		    finally (return value))))
-(print (car value))
+(print value)
 ;; Now start processing the read value
+(defvar inter (make-instance 'interpret))
+
+;; Compute
+(loop for i in value
+      do (apply-rule-set ctx 'stmt i inter))
+
+(format t "~%")
+(format t (get-output-stream-string (my-stream inter)))
