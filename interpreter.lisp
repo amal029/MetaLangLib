@@ -68,64 +68,93 @@
 (defmethod eval-plus (ctx obj (backend interpret))
   (let ((left (apply-rule-set ctx 'expr (car obj) backend))
 	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
-    (assert right (right) "Rvalue not a number in assign ~S" obj)
-    (assert left (left) "Lvalue not found in assign ~S" obj)
+    (assert right (right) "Rvalue not a number in context of ~S" obj)
+    (assert left (left) "Lvalue not found in context of ~S" obj)
     (+ left right)))
 
 (defmethod eval-minus (ctx obj (backend interpret))
   (let ((left (apply-rule-set ctx 'expr (car obj) backend))
 	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
-    (assert right (right) "Rvalue not a number in assign ~S" obj)
-    (assert left (left) "Lvalue not found in assign ~S" obj)
+    (assert right (right) "Rvalue not a number in context of ~S" obj)
+    (assert left (left) "Lvalue not found in context of ~S" obj)
     (- left right)))
 
 (defmethod eval-mult (ctx obj (backend interpret))
   (let ((left (apply-rule-set ctx 'expr (car obj) backend))
 	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
-    (assert right (right) "Rvalue not a number in assign ~S" obj)
-    (assert left (left) "Lvalue not found in assign ~S" obj)
+    (assert right (right) "Rvalue not a number in context of ~S" obj)
+    (assert left (left) "Lvalue not found in context of ~S" obj)
     (* left right)))
 
 (defmethod eval-div (ctx obj (backend interpret))
   (let ((left (apply-rule-set ctx 'expr (car obj) backend))
 	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
-    (assert right (right) "Rvalue not a number in assign ~S" obj)
-    (assert left (left) "Lvalue not found in assign ~S" obj)
+    (assert right (right) "Rvalue not a number in context of ~S" obj)
+    (assert left (left) "Lvalue not found in context of ~S" obj)
     (/ left right)))
 
 (defmethod eval-mod (ctx obj (backend interpret))
   (let ((left (apply-rule-set ctx 'expr (car obj) backend))
 	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
-    (assert right (right) "Rvalue not a number in assign ~S" obj)
-    (assert left (left) "Lvalue not found in assign ~S" obj)
+    (assert right (right) "Rvalue not a number in context of ~S" obj)
+    (assert left (left) "Lvalue not found in context of ~S" obj)
     (mod left right)))
 
 (defmethod eval-assign (ctx obj (backend interpret))
   (let ((right (apply-rule-set ctx 'expr (cadr obj) backend))
 	(left (apply-rule-set ctx 'expr (car obj) backend)))
-    (assert right (right) "Rvalue not a number in assign ~S" obj)
-    (assert left (left) "Lvalue not found in assign ~S" obj)
+    (assert right (right) "Rvalue not a number in context ~S" obj)
+    (assert left (left) "Lvalue not found in context of ~S" obj)
     ;; assign to the varible the right value
     (assign-to-var left right backend)))
 
+(defmethod eval-return (ctx obj (backend interpret))
+  (let ((toret (apply-rule-set ctx 'expr (car obj) backend)))
+    toret))
+
+(defmethod eval-seq (ctx obj (backend debug-backend))
+  (apply-rule-set ctx 'stmt (nth 0 obj) backend)
+  (apply-rule-set ctx 'stmt (nth 1 obj) backend))
+
+(defmethod eval-block (ctx obj (backend interpret))
+  (apply-rule-set ctx 'stmt (car obj) backend))
 
 (defmethod eval-funcall (ctx obj (backend interpret))
-  (let* ((func-struct (make-instance 'func-vars))
-	 (body (if (not (endp (slot-value backend 'others)))
-		   (gethash (car obj)
-			    (slot-value
-			     (car (slot-value backend 'others))
-			     'funcs))
-		   nil))
-	 (body (when (not body)
-		 (gethash (car obj) (slot-value backend 'gf)))))
-    (push func-struct (slot-value backend 'others))
-    ;; Now enter the body and interpret
-    (assert body (body) "Body of function ~S not found" (car obj))
-    ;TODO: Map the arguments to the parameters of the function body
-    (apply-rule-set ctx 'stmt (fourth body) backend)
-    ;; Pop the func struct out, since the function is done
-    (pop (slot-value backend 'others))))
+  (cond
+    ((eq (car obj) 'print)
+     (loop for i in (cdr obj)
+	   do (format t "Var ~S value is: ~S" (cadar i)
+		      (apply-rule-set ctx 'expr (car i) backend))))
+    (t (let* ((func-struct (make-instance 'func-vars))
+	      (body (if (not (endp (slot-value backend 'others)))
+			(gethash (car obj)
+				 (slot-value
+				  (car (slot-value backend 'others))
+				  'funcs))
+			nil))
+	      (body (when (not body)
+		      (gethash (car obj) (slot-value backend 'gf))))
+	      (params (second body))
+	      (argvals (loop for arg in (second obj)
+			     collect (apply-rule-set ctx 'expr arg backend)))
+	      (dvars (loop for p in params
+			   for arg in argvals
+			   collect `(= (defvar ,(car p) ,(cadr p)) (val ,arg))))
+	      (toret nil))
+	 (push func-struct (slot-value backend 'others))
+	 ;; Now enter the body and interpret
+	 (assert body (body) "Body of function ~S not found" (car obj))
+	 ;TODO: Map the arguments to the parameters of the function body
+	 (assert (= (length params) (length (second obj))))
+					;XXX: make the body with the new variables
+	 (setq body (reduce (lambda (x y) `(seq ,x ,y)) dvars
+			    :from-end t :initial-value (fourth body)))
+	 ;; (format t "Body for the function ~S is: ~S~%" (car obj) body)
+	 (setq toret (apply-rule-set ctx 'stmt body backend))
+	 ;; (format t "returned from function: ~S~%" toret)
+	 ;; Pop the func struct out, since the function is done
+	 (pop (slot-value backend 'others))
+	 toret))))
 
 ;; Example of reading a file with the code
 (defvar value)
