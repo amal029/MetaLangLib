@@ -50,6 +50,48 @@
 		    (cadr (gethash (car obj) (slot-value current-func 'vars))))))))
     val))
 
+(defmethod eval-if-else (ctx obj (backend interpret))
+  (let ((bool-val (apply-rule-set ctx 'logical-expr (first obj) backend)))
+    (if bool-val (apply-rule-set ctx 'stmt (second obj) backend)
+	(apply-rule-set ctx 'stmt (third obj) backend))))
+
+(defmethod eval-while (ctx obj (backend interpret))
+  (loop while (apply-rule-set ctx 'expr (car obj) backend)
+	do (apply-rule-set ctx 'stmt (cadr obj) backend)))
+
+(defmethod eval-and (ctx obj (backend interpret))
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend))
+	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
+    (and left right)))
+
+(defmethod eval-or (ctx obj (backend interpret))
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend))
+	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
+    (or left right)))
+
+(defmethod eval-leq (ctx obj (backend interpret))
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend))
+	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
+    (<= left right)))
+
+(defmethod eval-geq (ctx obj (backend interpret))
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend))
+	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
+    (>= left right)))
+
+(defmethod eval-gt (ctx obj (backend interpret))
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend))
+	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
+    (> left right)))
+
+(defmethod eval-lt (ctx obj (backend interpret))
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend))
+	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
+    (< left right)))
+
+(defmethod eval-not (ctx obj (backend interpret))
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend)))
+    (not left)))
 
 (defmethod eval-lvar (ctx obj (backend interpret))
   (let* ((val (eval-var ctx obj backend)))
