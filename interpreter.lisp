@@ -2,7 +2,7 @@
 ;; (load (merge-pathnames "clang.lisp"))
 
 (in-package :clang)
-
+(declaim (optimize (speed 1) (safety 1)))
 ;; Trying the type of class I want for the interpreter .GF is the hash
 ;; table of symbol name to function body. GV is is the hash map from
 ;; variable name (symbol) to (type . value)
@@ -32,7 +32,7 @@
 (defmethod eval-defvar (ctx obj (backend interpret))
   (cond
     ((endp (slot-value backend 'others))
-					;XXX: No shadowing
+     ;XXX: No shadowing
      (assert (not (gethash (cadr (cadr obj)) (slot-value backend 'gv))))
      (setf (gethash (cadr (cadr obj)) (slot-value backend 'gv)) obj))
     (t (let ((current-func (car (slot-value backend 'others))))
@@ -200,7 +200,7 @@
 
 ;; Example of reading a file with the code
 (defvar value)
-(with-open-file (fd (merge-pathnames "test.mlisp") :direction :input)
+(with-open-file (fd (merge-pathnames "test_while.mlisp") :direction :input)
   (setq value (loop for i = (read-preserving-whitespace fd nil nil)
 		    while i collect i into value
 		    finally (return value))))
