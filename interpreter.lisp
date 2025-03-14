@@ -214,5 +214,3 @@
 
 (format t "~%")
 (format t (get-output-stream-string (my-stream inter)))
-
-
