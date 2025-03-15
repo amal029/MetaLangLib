@@ -1,0 +1,14 @@
+(seq
+ (seq
+  (defun f (((type int) (var x))) (type int)
+    (block
+	(seq (if-else (< (var x) (val 10)) (= (lvar x) (+ (var x) (val 10)))
+		      (= (lvar x) (- (var x) (val 100))))
+	     (return (var x)))))
+
+  (defun main () (type void)
+    (block (seq (seq (= (defvar (type int) (var x)) (val 10))
+		     (= (lvar x) (+ (funcall f ((var x)))
+				    (var x))))
+		(funcall print ((var x)))))))
+ (funcall main ()))

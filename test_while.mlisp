@@ -1,12 +1,12 @@
 (seq
  (seq
-  (defun main () (int)
-    (block (seq
-	    (seq
-	     (= (defvar (type int) (var x)) (val 100))
-	     (seq (= (defvar (type int) (var i)) (val 0))
-		  (while (< (var i) (val 2))
-			 (block (seq (= (lvar x) (+ (var x) (var i)))
-				     (= (lvar i) (+ (val 1) (var i))))))))
-	    (return (var x))))))
- (funcall main ()))
+  (defun main () (type int)
+    (block
+	(seq
+	 (seq
+	  (= (defvar (type int) (var x)) (val 0))
+	  (while (< (var x) (val 20))
+		 (= (lvar x) (+ (var x) (val 1)))))
+	 (return (var x)))))
+  (= (defvar (type int) (var ret)) (funcall main ())))
+ (funcall print ((var ret))))
