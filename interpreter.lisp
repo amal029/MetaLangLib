@@ -198,6 +198,23 @@
 	 (pop (slot-value backend 'others))
 	 toret))))
 
+;; We want to add or change the type/object tree in the rules file
+
+;; Push the if-else rule
+(setf (rules::context-ruleset ctx)
+      (append '((if-else-expr . ((if-else . eval-if-else))))
+	      (rules::context-ruleset ctx)))
+;; We want to push a new rule called the func-rule
+(setf (rules::context-ruleset ctx)
+      (append '((func-expr . ((funcall . eval-funcall))))
+	      (rules::context-ruleset ctx)))
+
+;; Add these rules as expressions too
+(setf (cadr (assoc 'expr (rules::context-ruleset ctx)))
+      (append
+       (cadr (assoc 'expr (rules::context-ruleset ctx)))
+       '(func-expr if-else-expr)))
+
 ;; Example of reading a file with the code
 (defvar value)
 (with-open-file (fd (merge-pathnames "test_while.mlisp") :direction :input)

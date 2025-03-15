@@ -307,7 +307,8 @@
 					  (and . eval-and)
 					  (not . eval-not)))
 			 (decl-expr . ((defvar . eval-defvar)))
-			 (func-expr . ((funcall . eval-funcall)))
+			 ;; (func-expr . ((funcall . eval-funcall)))
+			 ;; (if-else-expr . ((if-else . eval-if-else)))
 			 (types . ((type . eval-type)
 				   (ptrtype . eval-ptrtype)
 				   (struct . eval-structype)))
@@ -335,7 +336,7 @@
 			 ;; want summed together.
 			 (expr . ((,(rules::context-union-kw ctx) .
 				    (math-expr simple-expr add-expr
-				     logical-expr decl-expr func-expr))))))
+					       logical-expr decl-expr))))))
 
 ;; Example of the language
 (defvar example1)

@@ -10,11 +10,9 @@
 	   (while (< (var x) (val 20))
 		  (block
 		      (seq
-		       (seq
-			(if-else (<= (var x) (val 0))
-				 (= (lvar x) (+ (val 1) (var x)))
-				 (= (lvar x) (var x)))
-			(= (lvar t) (* (var x) (var t))))
+		       (= (lvar t) (* (if-else (<= (var x) (val 0))
+					       (return (+ (var x) (val 1)))
+					       (return (var x))) (var t)))
 		       (= (lvar x) (+ (var x) (val 1))))))))
 	 (return (var t)))))
   (= (defvar (type int) (var ret)) (funcall main ())))
