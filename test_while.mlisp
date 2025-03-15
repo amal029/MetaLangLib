@@ -5,8 +5,17 @@
 	(seq
 	 (seq
 	  (= (defvar (type int) (var x)) (val 0))
-	  (while (< (var x) (val 20))
-		 (= (lvar x) (+ (var x) (val 1)))))
-	 (return (var x)))))
+	  (seq
+	   (= (defvar (type int) (var t)) (val 1))
+	   (while (< (var x) (val 20))
+		  (block
+		      (seq
+		       (seq
+			(if-else (<= (var x) (val 0))
+				 (= (lvar x) (+ (val 1) (var x)))
+				 (= (lvar x) (var x)))
+			(= (lvar t) (* (var x) (var t))))
+		       (= (lvar x) (+ (var x) (val 1))))))))
+	 (return (var t)))))
   (= (defvar (type int) (var ret)) (funcall main ())))
  (funcall print ((var ret))))
