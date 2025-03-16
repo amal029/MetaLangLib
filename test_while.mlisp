@@ -4,16 +4,16 @@
     (block
 	(seq
 	 (seq
-	  (= (defvar (type int) (var x)) (val 0))
+	  (= (defvar (type int) (symbol x)) 0)
 	  (seq
-	   (= (defvar (type int) (var t)) (val 1))
-	   (while (< (var x) (val 20))
+	   (= (defvar (type int) (symbol t)) 1)
+	   (while (< x 20)
 		  (block
 		      (seq
-		       (= (lvar t) (* (if-else (<= (var x) (val 0))
-					       (return (+ (var x) (val 1)))
-					       (return (var x))) (var t)))
-		       (= (lvar x) (+ (var x) (val 1))))))))
-	 (return (var t)))))
-  (= (defvar (type int) (var ret)) (funcall main ())))
- (funcall print ((var ret))))
+		       (= (lvar t) (* (if-else (<= x 0)
+					       (return (+ x 1))
+					       (return x)) t))
+		       (= (lvar x) (+ x 1)))))))
+	 (return (symbol t)))))
+  (= (defvar (type int) (symbol ret)) (funcall main ())))
+ (funcall print ((symbol ret))))
