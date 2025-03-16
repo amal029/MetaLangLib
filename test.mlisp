@@ -1,15 +1,14 @@
-;FIXME: Make sure that vars are not needed anywhere.
 ;FIXME: How to handle lvar?
 (seq
  (seq
-  (defun f (((type int) (symbol x))) (type int)
+  (defun f (((type int) x)) (type int)
     (block
 	(seq (if-else (< x 10) (= (lvar x) (+ x 10))
 		      (= (lvar x) (- x 100)))
 	     (return x))))
 
   (defun main () (type void)
-    (block (seq (seq (= (defvar (type int) (symbol x)) 10)
+    (block (seq (seq (= (defvar (type int) x) 10)
 		     (= (lvar x) (+ (funcall f (x)) x)))
 		(funcall print ((symbol x)))))))
  (funcall main ()))

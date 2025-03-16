@@ -2,7 +2,7 @@
 ;; (load (merge-pathnames "clang.lisp"))
 
 (in-package :clang)
-(declaim (optimize (speed 3) (safety 0)))
+;; (declaim (optimize (speed 3) (safety 0)))
 ;; Trying the type of class I want for the interpreter .GF is the hash
 ;; table of symbol name to function body. GV is is the hash map from
 ;; variable name (symbol) to (type . value)
@@ -32,14 +32,17 @@
 (defmethod eval-defvar (ctx obj (backend interpret))
   (cond
     ((endp (slot-value backend 'others))
-     ;XXX: No shadowing
-     (assert (not (gethash (cadr (cadr obj)) (slot-value backend 'gv))))
-     (setf (gethash (cadr (cadr obj)) (slot-value backend 'gv)) obj))
-    (t (let ((current-func (car (slot-value backend 'others))))
-	 (assert (not (gethash (cadr (cadr obj)) (slot-value current-func 'vars))))
-	 (setf (gethash (cadr (cadr obj)) (slot-value current-func 'vars)) obj))))
-  ;; always send back the variable name
-  (cadr (cadr obj)))
+     ;XXX: No shadowing from the global variables
+     (let ((var-is (if (not (symbolp (cadr obj))) (cadr(cadr obj)) (cadr obj))))
+       (assert (not (gethash var-is (slot-value backend 'gv))))
+       (setf (gethash var-is (slot-value backend 'gv)) obj)
+       var-is))
+    (t (let ((current-func (car (slot-value backend 'others)))
+	     (var-is (if (not (symbolp (cadr obj))) (cadr(cadr obj)) (cadr obj))))
+	 ;; No shadowing in the local variables
+	 (assert (not (gethash var-is (slot-value current-func 'vars))))
+	 (setf (gethash var-is (slot-value current-func 'vars)) obj)
+	 var-is))))
 
 
 (defmethod eval-var (ctx obj (backend interpret))
@@ -92,6 +95,16 @@
 (defmethod eval-not (ctx obj (backend interpret))
   (let ((left (apply-rule-set ctx 'expr (car obj) backend)))
     (not left)))
+
+(defmethod eval-and (ctx obj backend)
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend))
+	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
+    (and left right)))
+
+(defmethod eval-or (ctx obj backend)
+  (let ((left (apply-rule-set ctx 'expr (car obj) backend))
+	(right (apply-rule-set ctx 'expr (cadr obj) backend)))
+    (or left right)))
 
 (defmethod eval-lvar (ctx obj (backend interpret))
   (let* ((val (eval-var ctx obj backend)))
