@@ -181,7 +181,7 @@
 			     collect (apply-rule-set ctx 'expr arg backend)))
 	      (dvars (loop for p in params
 			   for arg in argvals
-			   collect `(= (defvar ,(car p) ,(cadr p)) (val ,arg))))
+			   collect `(= (defvar ,(car p) ,(cadr p)) ,arg)))
 	      (toret nil))
 	 (push func-struct (slot-value backend 'others))
 	 ;; Now enter the body and interpret

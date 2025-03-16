@@ -314,8 +314,8 @@
 				   (struct . eval-structype)))
 			 (add-expr . ((address . eval-address)
 				      (deref . eval-deref)))
-			 (simple-expr . ((val . eval-val)
-					 (var . eval-var)
+			 (simple-expr . ((number . eval-val)
+					 (symbol . eval-var)
 					 (lvar . eval-lvar)
 					 (brackets . eval-brackets)))
 			 (stmt . ((= . eval-assign)
@@ -341,11 +341,11 @@
 ;; Example of the language
 (defvar example1)
 (setq example1 `(seq
-		 (= (var h) (% (var z) (val 100)))
+		 (= h (% z 100))
 		 (seq
-		  (= (var z)
-		     (* (brackets (+ (var z) (var x))) (/ (var y) (val 100))))
-		  (= (var z) (+ (var x) (val 10))))))
+		  (= z
+		     (* (brackets (+ z x)) (/ y 100)))
+		  (= z (+ x 10)))))
 
 
 ;; ;; Make the backend instance
@@ -357,7 +357,7 @@
 
 ;; Example-2 (a simpler example)
 (defvar e2)
-(setq e2 `(+ (var x) (val 10)))
+(setq e2 `(+ x 10))
 
 (apply-rule-set ctx 'math-expr e2 my-debug)
 
@@ -366,18 +366,18 @@
 
 ;; Example of a function definition
 (setq e2 `(seq
-	   (if-else (and (var h)
-			 (brackets (or (>= (var x) (val 10)) (< (var t) (val 100)))))
-		    (block (= (var x) (val 100)))
+	   (if-else (and h
+			 (brackets (or (>= x 10) (< t 100))))
+		    (block (=  x 100))
 		    (block (nothing)))
 	   (seq (defun F
-		    (((type int) (var x))
-		     ((ptrtype (type float)) (var y))) ;the input params
+		    (((type int) (symbol x))
+		     ((ptrtype (type float)) y)) ;the input params
 		  (type void)			;the output type
-		  (block (seq (= (var x) (address (var y)))
-			      (= (deref (var x)) (val 10)))))
+		  (block (seq (= x (address y))
+			      (= (deref x) 10))))
 		(funcall F
-			 ((val 10) (address (var h))))))) ;the body
+			 (10 (address h)))))) ;the body
 
 (apply-rule-set ctx 'stmt e2 my-debug)
 (format t "~%")
@@ -385,11 +385,11 @@
 
 ;TODO: Test how the for statement performs -- rewrite and produce c-code
 (defvar e3)
-(setq e3 `(for ((= (defvar (type int) (var i)) (val 0))
-		(< (var i) (val 10))
-		(= (lvar i) (+ (var i) (val 1))))
+(setq e3 `(for ((= (defvar (type int) i) 0)
+		(< i 10)
+		(= i (+ i 1)))
 	       ;; The body
-	       (= (var j) (* (var j) (val 100)))))
+	       (= j (* j 100))))
 (defparameter my-rewrite (make-instance 'rewrite))
 (apply-rule-set ctx 'stmt e3 my-rewrite)
 (format t "~%")

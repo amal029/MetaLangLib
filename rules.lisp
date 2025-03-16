@@ -54,8 +54,8 @@
   (let* ((obj (if (listp obj) obj
 		  (cond
 		    ;; Fix this to be something that comes from clang
-		    ((symbolp obj) `(clang::var ,obj))
-		    ((numberp obj) `(clang::val ,obj)))))
+		    ((symbolp obj) `(symbol ,obj))
+		    ((numberp obj) `(number ,obj)))))
 	 (func (car (progn
 		      (func-search ctx rule-set-name obj '())))))
     ;; Expected func signature is: (<nam> ctx obj &rest args)
