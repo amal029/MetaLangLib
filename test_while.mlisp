@@ -6,15 +6,15 @@
 	 (seq
 	  (= (defvar (type int) x) 0)
 	  (seq
-	   (= (defvar (type int) t) 1)
+	   (= (defvar (type float) t) 1.2)
 	   (while (< x 20)
 		  (block
 		      (seq
-		       (= (lvar t) (* (if-else (<= x 0)
-					       (return (+ x 1))
-					       (return x))
-				      t))
-		       (= (lvar x) (+ x 1)))))))
+		       (= t (* (if-else (<= x 0)
+					(return (+ x 1))
+					(return x))
+			       t))
+		       (= x (+ x 1)))))))
 	 (return t))))
   (= (defvar (type int) ret) (funcall main ())))
  (funcall print ((symbol ret))))

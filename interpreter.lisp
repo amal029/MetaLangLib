@@ -157,7 +157,9 @@
 
 (defmethod eval-assign (ctx obj (backend interpret))
   (let ((right (apply-rule-set ctx 'expr (cadr obj) backend))
-	(left (apply-rule-set ctx 'expr (car obj) backend)))
+	(left (apply-rule-set ctx 'expr
+			      (if (symbolp (car obj)) `(lvar ,(car obj)) (car obj))
+			      backend)))
     (assert right (right) "Rvalue not a number in context ~S" obj)
     (assert left (left) "Lvalue not found in context of ~S" obj)
     ;; assign to the varible the right value
