@@ -232,7 +232,7 @@
 
 ;; Example of reading a file with the code
 (defvar value)
-(with-open-file (fd (merge-pathnames "test_while.mlisp") :direction :input)
+(with-open-file (fd (merge-pathnames "test.mlisp") :direction :input)
   (setq value (loop for i = (read-preserving-whitespace fd nil nil)
 		    while i collect i into value
 		    finally (return value))))
